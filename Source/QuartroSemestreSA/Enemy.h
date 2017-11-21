@@ -1,36 +1,39 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "PaperCharacter.h"
 #include "Enemy.generated.h"
 
 UCLASS()
-class QUARTROSEMESTRESA_API AEnemy : public AActor
+class QUARTROSEMESTRESA_API AEnemy : public APaperCharacter
 {
 	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
+
 	AEnemy();
 
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	void SetLife(int16 NewLife);
+public:
 
 	int16 GetLife();
+	void SetLife(int16 NewLife);
+	void ChangeColorWhenHit();
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
 
-protected:
+	//--------------------- Métodos ---------------------//
 
-	UPROPERTY(EditAnywhere)
-		class UPaperFlipbookComponent* MyFlipbook;
+	void BackToOriginalColor();
+	void DeathEvent();
+
+	//-------------------- Atributos --------------------//
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float WalkVel;
 
 	UPROPERTY(EditAnywhere)
 		int16 Life;
+
+	UPROPERTY(EditAnywhere)
+		FTimerHandle TimerToChangeColor;
+
 };

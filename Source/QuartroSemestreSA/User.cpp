@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "User.h"
 #include "PaperFlipbook.h"
 #include "PaperFlipbookComponent.h"
@@ -13,7 +11,6 @@
 
 AUser::AUser()
 {
-
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 	CameraBoom->TargetArmLength = 600.0f;
@@ -27,6 +24,9 @@ AUser::AUser()
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 
 	GetCharacterMovement()->MaxWalkSpeed = 250;
+
+	Life = 100;
+	InitialLife = Life;
 }
 
 void AUser::BeginPlay()
@@ -59,6 +59,42 @@ void AUser::SetupPlayerInputComponent(UInputComponent * PlayerInputComponent)
 
 	PlayerInputComponent->BindAxis("MoveLeftRight", this, &AUser::MoveLeftRight);
 	PlayerInputComponent->BindAxis("MoveUpDown", this, &AUser::MoveUpDown);
+}
+
+int AUser::GetLife()
+{
+	return Life;
+}
+
+void AUser::SetLife(int Value)
+{
+	if (Value >= InitialLife) {
+		Life = InitialLife;
+	} else if (Value <= 0) {
+		Life = 0;
+	} else {
+		Life = Value;
+	}
+}
+
+int AUser::GetAmmoEnergy()
+{
+	return AmmoEnergy;
+}
+
+void AUser::SetAmmoEnergy(int Value)
+{
+	AmmoEnergy = Value;
+}
+
+int AUser::GetAmmoLaser()
+{
+	return AmmoLaser;
+}
+
+void AUser::SetAmmoLaser(int Value)
+{
+	AmmoLaser = Value;
 }
 
 void AUser::MoveUpDown(float Value)
@@ -101,8 +137,36 @@ void AUser::Move()
 	AddMovementInput(FVector(1.0f, 0.0f, 0.0f), VelX);
 }
 
-TSubclassOf<class AUserProjectile> AUser::ChangeShot(int Value)
+TSubclassOf<class AUserProjectile> AUser::ShotType()
 {
-	return ProjectilesArray[Value];
+	if (PosToAcessArray == 1) {
+		AmmoLaser--;
+	} else if (PosToAcessArray == 2) {
+		AmmoEnergy--;
+	}
+
+	return ProjectilesArray[PosToAcessArray];
 }
 
+void AUser::CheckAmmo()
+{
+	if (PosToAcessArray == 1 && AmmoLaser <= 0 ||
+		PosToAcessArray == 2 && AmmoEnergy <= 0) {
+		PosToAcessArray = 0;
+	}
+}
+
+void AUser::ChangeShot(int Value)
+{
+	if (ProjectilesArray.Num() > 0 && Value >= 0 && Value <= ProjectilesArray.Num()) {
+		switch (Value) {
+		case 1:
+			AmmoEnergy = 0;
+			break;
+		case 2:
+			AmmoLaser = 0;
+			break;
+		}
+		PosToAcessArray = Value;
+	}
+}

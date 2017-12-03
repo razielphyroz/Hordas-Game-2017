@@ -17,6 +17,17 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	
+	int GetLife();
+	void SetLife(int Value);
+
+	int GetAmmoEnergy();
+	void SetAmmoEnergy(int Value);
+
+	int GetAmmoLaser();
+	void SetAmmoLaser(int Value);
+
+	void ChangeShot(int Value);
+
 protected:
 
 //--------------------- Métodos ---------------------//
@@ -26,13 +37,21 @@ protected:
 	void Move();
 
 	UFUNCTION(BlueprintCallable)
-		TSubclassOf<class AUserProjectile> ChangeShot(int Value);
+		TSubclassOf<class AUserProjectile> ShotType();
+
+	UFUNCTION(BlueprintCallable)
+		void CheckAmmo();
 
 //-------------------- Atributos --------------------//
 
 	float VelX;
 	float VelY;
 	class UPaperFlipbook* FlipbookAtual;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Atributos")
+		int AmmoLaser;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Atributos")
+		int AmmoEnergy;
 
 	UPROPERTY(EditAnywhere, Category = "Atributos")
 		class UCameraComponent* Camera;
@@ -58,4 +77,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Atributos")
 		class UUserWidget* UserWidget;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Atributos")
+		int Life;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Atributos")
+		int InitialLife;
 };

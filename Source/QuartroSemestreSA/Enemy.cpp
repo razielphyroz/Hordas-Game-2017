@@ -2,19 +2,43 @@
 #include "Runtime/Core/Public/Math/Color.h"
 #include "Runtime/Engine/Public/TimerManager.h"
 #include "PaperFlipbookComponent.h"
+#include "Runtime/Engine/Classes/Components/CapsuleComponent.h"
+#include "User.h"
+#include "Runtime/CoreUObject/Public/UObject/ConstructorHelpers.h"
+#include "Engine/World.h"
+#include "PowerUpLife.h"
+#include "PowerUpLaser.h"
+#include "PowerUpEnergy.h"
+#include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"
+#include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
 
 AEnemy::AEnemy()
 {
 	bBlockInput = true;
+
+	//GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &AEnemy::OnHit);
+
+	ConstructorHelpers::FObjectFinder<UClass>LifePowerUP(TEXT("Blueprint'/Game/Blueprints/PowerUPs/PowerUpLifeBP.PowerUpLifeBP_C'"));
+	if (LifePowerUP.Succeeded()) { LifePowerUpRef = Cast<UClass>(LifePowerUP.Object);	}
+
+	ConstructorHelpers::FObjectFinder<UClass>AmmoLaser(TEXT("Blueprint'/Game/Blueprints/PowerUPs/LaserAmmoBP.LaserAmmoBP_C'"));
+	if (AmmoLaser.Succeeded()) { AmmoLaserRef = Cast<UClass>(AmmoLaser.Object); }
+
+	ConstructorHelpers::FObjectFinder<UClass>AmmoEnergy(TEXT("Blueprint'/Game/Blueprints/PowerUPs/EnergyAmmoBP.EnergyAmmoBP_C'"));
+	if (AmmoEnergy.Succeeded()) { AmmoEnergyRef = Cast<UClass>(AmmoEnergy.Object); }
+
+	CanDamagePlayer = true;
 }
 
 void AEnemy::SetLife(int16 NewLife)
 {
-	Life = NewLife;
+
 	ChangeColorWhenHit();
 
-	if (Life <= 0) {
+	if (NewLife <= 0) {
 		DeathEvent();
+	} else {
+		Life = NewLife;
 	}
 }
 
@@ -29,16 +53,102 @@ void AEnemy::ChangeColorWhenHit()
 	GetWorldTimerManager().SetTimer(TimerToChangeColor, this, &AEnemy::BackToOriginalColor, 0.1f, false);
 }
 
+void AEnemy::BeginPlay()
+{
+	Super::BeginPlay();
+
+	UWorld* World = GetWorld();
+	if (World) {
+		APawn* Player = UGameplayStatics::GetPlayerPawn(World, 0);
+		if (Player) {
+			Personagem = Cast<AUser>(Player);
+		}
+	}
+}
+
+void AEnemy::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	Move();
+}
+
+void AEnemy::Move()
+{
+	FRotator Direction = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), Personagem->GetActorLocation());
+	AddMovementInput(Direction.Vector(), WalkVel);
+	UpdateDirection(Direction);
+}
+
+void AEnemy::UpdateDirection(FRotator Direction)
+{
+	UPaperFlipbook* FlipbookAtual = GetSprite()->GetFlipbook();
+
+	if (Direction.Yaw >= -45.0f && Direction.Yaw <= 45.0f && FlipbookAtual != FlipbooksArray[3]) {
+		GetSprite()->SetFlipbook(FlipbooksArray[3]);
+	} else if (Direction.Yaw < -45.0f && Direction.Yaw >= -135.0f && FlipbookAtual != FlipbooksArray[0]) {
+		GetSprite()->SetFlipbook(FlipbooksArray[0]);
+	} else if ((Direction.Yaw < -135.0f && Direction.Yaw >= -180.0f || Direction.Yaw <= 180.0f && Direction.Yaw >= 135.0f) && FlipbookAtual != FlipbooksArray[2]) {
+		GetSprite()->SetFlipbook(FlipbooksArray[2]);
+	} else if (Direction.Yaw <= 135.0f && Direction.Yaw > 45.0f && FlipbookAtual != FlipbooksArray[1]) {
+		GetSprite()->SetFlipbook(FlipbooksArray[1]);
+	}
+}
+
 void AEnemy::BackToOriginalColor()
 {
 	GetSprite()->SetSpriteColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
+void AEnemy::PowerUP()
+{
+	int16 RandomPowerUP = FMath::FRandRange(0, 2);
+
+	if (RandomPowerUP <= 1) {
+
+		UWorld* World = GetWorld();
+		
+		if (World) {
+		
+			FActorSpawnParameters SpawnParameters;
+			FVector Location(GetActorLocation().X, GetActorLocation().Y, 226.0f);
+
+			switch (RandomPowerUP) {
+			case 0:
+				World->SpawnActor<APowerUpLife>(LifePowerUpRef, Location, FRotator::ZeroRotator, SpawnParameters);
+				break;
+			case 1:
+				int AmmoType = FMath::FRandRange(0, 2);
+			
+				if (AmmoType == 0) {
+					World->SpawnActor<APowerUpLaser>(AmmoLaserRef, Location, FRotator::ZeroRotator, SpawnParameters);
+				} else {
+					World->SpawnActor<APowerUpEnergy>(AmmoEnergyRef, Location, FRotator::ZeroRotator, SpawnParameters);
+				}
+				break;
+				//case 2:UE_LOG(LogTemp, Warning, TEXT("Enemy Dropou Runa"));
+			}
+		}
+	}
+}
+
 void AEnemy::DeathEvent()
 {
 	//CreateCorpse
-	//ChanceToDropPowerUp
+	PowerUP();
 	Destroy();
 }
 
+void AEnemy::ChangeCanDamagePlayer()
+{
+	CanDamagePlayer = true;
+}
 
+void AEnemy::OnHit(AActor* OtherActor)
+{
+	if (CanDamagePlayer && OtherActor == Personagem) {
+		Personagem->SetLife(Personagem->GetLife() - Damage);
+		CanDamagePlayer = false;
+		UE_LOG(LogTemp, Warning, TEXT("Inimigo Hitou."));
+		GetWorldTimerManager().SetTimer(AttackInterval, this, &AEnemy::ChangeCanDamagePlayer, 1.5f, false);
+	}
+}

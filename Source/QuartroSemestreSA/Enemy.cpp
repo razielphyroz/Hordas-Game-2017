@@ -9,14 +9,15 @@
 #include "PowerUpLife.h"
 #include "PowerUpLaser.h"
 #include "PowerUpEnergy.h"
+#include "FatalExplosionPowerUP.h"
 #include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"
 #include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
+#include "ManagerClass.h"
 
 AEnemy::AEnemy()
 {
 	bBlockInput = true;
-
-	//GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &AEnemy::OnHit);
+	CanDamagePlayer = true;
 
 	ConstructorHelpers::FObjectFinder<UClass>LifePowerUP(TEXT("Blueprint'/Game/Blueprints/PowerUPs/PowerUpLifeBP.PowerUpLifeBP_C'"));
 	if (LifePowerUP.Succeeded()) { LifePowerUpRef = Cast<UClass>(LifePowerUP.Object);	}
@@ -27,7 +28,10 @@ AEnemy::AEnemy()
 	ConstructorHelpers::FObjectFinder<UClass>AmmoEnergy(TEXT("Blueprint'/Game/Blueprints/PowerUPs/EnergyAmmoBP.EnergyAmmoBP_C'"));
 	if (AmmoEnergy.Succeeded()) { AmmoEnergyRef = Cast<UClass>(AmmoEnergy.Object); }
 
-	CanDamagePlayer = true;
+	ConstructorHelpers::FObjectFinder<UClass>LoadFatal(TEXT("Blueprint'/Game/Blueprints/PowerUPs/FatalExplosionPowerUPBP.FatalExplosionPowerUPBP_C'"));
+	if (LoadFatal.Succeeded()) { FatalExplosion = Cast<UClass>(LoadFatal.Object); }
+
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 void AEnemy::SetLife(int16 NewLife)
@@ -63,13 +67,25 @@ void AEnemy::BeginPlay()
 		if (Player) {
 			Personagem = Cast<AUser>(Player);
 		}
+		
+		TArray<AActor*> ActorsArray;
+		UGameplayStatics::GetAllActorsOfClass(World, AManagerClass::StaticClass(), ActorsArray);
+
+		if (ActorsArray.Num() >= 1) {
+			Manager = Cast<AManagerClass>(ActorsArray[0]);
+		}
 	}
+
+	GetWorldTimerManager().SetTimer(TimeToSpawn, this, &AEnemy::StartPlay, 5.0f, false);
 }
 
 void AEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	Move();
+	if (ReadyToPlay) {
+		Move();
+	}
+
 }
 
 void AEnemy::Move()
@@ -110,22 +126,23 @@ void AEnemy::PowerUP()
 		if (World) {
 		
 			FActorSpawnParameters SpawnParameters;
-			FVector Location(GetActorLocation().X, GetActorLocation().Y, 226.0f);
+			FVector Location(GetActorLocation().X, GetActorLocation().Y, 225.0f);
 
 			switch (RandomPowerUP) {
 			case 0:
 				World->SpawnActor<APowerUpLife>(LifePowerUpRef, Location, FRotator::ZeroRotator, SpawnParameters);
 				break;
 			case 1:
-				int AmmoType = FMath::FRandRange(0, 2);
+				int AmmoType = FMath::FRandRange(0, 11);
 			
-				if (AmmoType == 0) {
+				if (AmmoType <= 4) {
 					World->SpawnActor<APowerUpLaser>(AmmoLaserRef, Location, FRotator::ZeroRotator, SpawnParameters);
-				} else {
+				} else if (AmmoType > 4 && AmmoType <= 9) {
 					World->SpawnActor<APowerUpEnergy>(AmmoEnergyRef, Location, FRotator::ZeroRotator, SpawnParameters);
+				} else {
+					World->SpawnActor<AFatalExplosionPowerUP>(FatalExplosion, Location, FRotator::ZeroRotator, SpawnParameters);
 				}
 				break;
-				//case 2:UE_LOG(LogTemp, Warning, TEXT("Enemy Dropou Runa"));
 			}
 		}
 	}
@@ -133,8 +150,8 @@ void AEnemy::PowerUP()
 
 void AEnemy::DeathEvent()
 {
-	//CreateCorpse
 	PowerUP();
+	Manager->IncreaseDeadEnemies();
 	Destroy();
 }
 
@@ -143,12 +160,18 @@ void AEnemy::ChangeCanDamagePlayer()
 	CanDamagePlayer = true;
 }
 
+void AEnemy::StartPlay()
+{
+	ReadyToPlay = true;
+	GetCapsuleComponent()->bGenerateOverlapEvents = true;
+	GetCapsuleComponent()->SetCollisionProfileName("Pawn");
+}
+
 void AEnemy::OnHit(AActor* OtherActor)
 {
 	if (CanDamagePlayer && OtherActor == Personagem) {
 		Personagem->SetLife(Personagem->GetLife() - Damage);
 		CanDamagePlayer = false;
-		UE_LOG(LogTemp, Warning, TEXT("Inimigo Hitou."));
 		GetWorldTimerManager().SetTimer(AttackInterval, this, &AEnemy::ChangeCanDamagePlayer, 1.5f, false);
 	}
 }

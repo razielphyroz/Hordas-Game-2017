@@ -32,13 +32,22 @@ protected:
 	void Move();
 	void UpdateDirection(FRotator Direction);
 	void ChangeCanDamagePlayer();
+	void StartPlay();
 
 	//-------------------- Atributos --------------------//
 
 	TSubclassOf<AActor> LifePowerUpRef;
 	TSubclassOf<AActor> AmmoLaserRef;
 	TSubclassOf<AActor> AmmoEnergyRef;
+	TSubclassOf<AActor> FatalExplosion;
+	FTimerHandle TimeToSpawn;
+
 	bool CanDamagePlayer;
+	class AManagerClass* Manager;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Atributos")
+		bool ReadyToPlay;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Atributos")
 		float WalkVel;

@@ -36,6 +36,7 @@ protected:
 	void MoveUpDown(float Value);
 	void Move();
 
+
 	UFUNCTION(BlueprintCallable)
 		TSubclassOf<class AUserProjectile> ShotType();
 
@@ -52,6 +53,9 @@ protected:
 		int AmmoLaser;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Atributos")
 		int AmmoEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Atributos")
+		class AManagerClass* Manager;
 
 	UPROPERTY(EditAnywhere, Category = "Atributos")
 		class UCameraComponent* Camera;
@@ -82,4 +86,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Atributos")
 		int InitialLife;
+
+
 };

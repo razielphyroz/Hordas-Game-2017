@@ -8,6 +8,7 @@
 #include "Runtime/Engine/Classes/GameFramework/CharacterMovementComponent.h"
 #include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"
 #include "Runtime/UMG/Public/Blueprint/WidgetBlueprintLibrary.h"
+#include "ManagerClass.h"
 
 AUser::AUser()
 {
@@ -32,10 +33,10 @@ AUser::AUser()
 void AUser::BeginPlay()
 { 
 	Super::BeginPlay(); 
+	UWorld* World = GetWorld();
+	if (World != nullptr) {
 
-	if (MyScreen != NULL) {
-		UWorld* World = GetWorld();
-		if (World != nullptr) {
+		if (MyScreen != NULL) {
 			APlayerController* Controller = UGameplayStatics::GetPlayerController(World, 0);
 			if (Controller != nullptr) {
 				UserWidget = UWidgetBlueprintLibrary::Create(World, MyScreen, Controller);
@@ -43,6 +44,13 @@ void AUser::BeginPlay()
 					UserWidget->AddToViewport();
 				}
 			}
+		}
+
+		TArray<AActor*> ActorsArray;
+		UGameplayStatics::GetAllActorsOfClass(World, AManagerClass::StaticClass(), ActorsArray);
+
+		if (ActorsArray.Num() >= 1) {
+			Manager = Cast<AManagerClass>(ActorsArray[0]);
 		}
 	}
 }
